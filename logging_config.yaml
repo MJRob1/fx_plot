@@ -1,0 +1,24 @@
+appenders:
+  fx_stdout:
+    kind: console
+    encoder:
+      pattern: "{h({d(%Y-%m-%d %H:%M:%S)(utc)} - {l}: {m}{n})}"
+  fx_file_logger:
+    kind: rolling_file
+    path: "logs/fx_plot.log"
+    encoder:
+      pattern: "{d(%Y-%m-%d %H:%M:%S)(utc)} - {h({l})}: {m}{n}"
+    policy:
+      trigger:
+        kind: size
+        limit: 1Gb
+      roller:
+        kind: fixed_window
+        base: 1
+        count: 10
+        pattern: "logs/fx_plot{}.log"
+root:
+  level: debug
+  appenders:
+    - fx_stdout
+    - fx_file_logger

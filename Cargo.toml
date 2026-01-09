@@ -1,0 +1,13 @@
+[package]
+name = "fx_plot"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+eframe = "0.33.3"
+egui = "0.33.3"
+egui_plot = "0.34.0"
+rdkafka = "0.38.0"
+tokio = { version = "1", default-features = false, features = ["full"]}
+log = "0.4.29"
+log4rs = "1.4.0"
