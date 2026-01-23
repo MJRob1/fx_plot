@@ -18,7 +18,7 @@ appenders:
         count: 10
         pattern: "logs/fx_plot{}.log"
 root:
-  level: debug
+  level: error
   appenders:
     - fx_stdout
     - fx_file_logger

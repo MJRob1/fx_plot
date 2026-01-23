@@ -12,11 +12,8 @@ use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Default)]
 pub struct MarketData {
-    pub lp: String,
-    pub currency_pair: String,
-    pub buy_price: f64,
-    pub sell_price: f64,
-    pub timestamp: u64,
+    pub buy_points: Vec<[f64; 2]>,
+    pub zero_time_ref: u64,
 }
 
 impl MarketData {
@@ -25,12 +22,9 @@ impl MarketData {
         Ok(())
     }
     pub fn new() -> Self {
-        MarketData {
-            lp: String::new(),
-            currency_pair: String::new(),
-            buy_price: 0.0,
-            sell_price: 0.0,
-            timestamp: 0,
+        Self {
+            buy_points: Vec::new(),
+            zero_time_ref: 0,
         }
     }
 }
@@ -121,7 +115,9 @@ async fn consume(
                         if let Err(e) = market_data.update(s) {
                             error!("market data not processed - {e}");
                         } else {
+                            // println!("consume updated market data: {:?}", *market_data);
                             ctx.request_repaint();
+                            // thread::sleep(Duration::from_millis(1));
                         }
                     }
                     Some(Err(e)) => error!(
@@ -139,7 +135,7 @@ fn extract_market_data(market_data: &mut MarketData, payload: &str) -> Result<()
     let mut vol_prices_vec: Vec<(i32, f64, String)> = Vec::new();
     let mut market_data_params = get_params(payload, 9)?;
     let liquidity_provider = get_str_field(market_data_params.next())?;
-    let currency_pair = get_str_field(market_data_params.next())?;
+    let _currency_pair = get_str_field(market_data_params.next())?;
     let one_mill_buy_price: f64 = market_data_params.next().unwrap_or("").trim().parse()?;
     vol_prices_vec.push((1, one_mill_buy_price, String::from("Buy")));
     let one_mill_sell_price: f64 = market_data_params.next().unwrap_or("").trim().parse()?;
@@ -153,12 +149,22 @@ fn extract_market_data(market_data: &mut MarketData, payload: &str) -> Result<()
     let five_mill_sell_price: f64 = market_data_params.next().unwrap_or("").trim().parse()?;
     vol_prices_vec.push((5, five_mill_sell_price, String::from("Sell")));
     let timestamp: u64 = market_data_params.next().unwrap_or("").trim().parse()?;
-    market_data.lp = liquidity_provider.to_string();
-    market_data.currency_pair = currency_pair.to_string();
-    market_data.buy_price = one_mill_buy_price;
-    market_data.sell_price = one_mill_sell_price;
-    market_data.timestamp = timestamp;
 
+    // let's just plot one_mill_buy_price for CITI for now
+    if liquidity_provider.trim() == "CITI" {
+        // set first timestamp as zero time reference
+        if market_data.buy_points.len() == 0 {
+            market_data.zero_time_ref = timestamp;
+            market_data.buy_points.push([0.0, one_mill_buy_price]);
+        } else {
+            // println!("liquidity_provider: {}", liquidity_provider);
+            // println!("time delta: {}", timestamp - market_data.zero_time_ref);
+            let adjusted_timestamp = (timestamp - market_data.zero_time_ref) / 1000000000; // convert to seconds for egui plot x axis
+            market_data
+                .buy_points
+                .push([adjusted_timestamp as f64, one_mill_buy_price]);
+        }
+    }
     Ok(())
 }
 

@@ -11,3 +11,4 @@ rdkafka = "0.38.0"
 tokio = { version = "1", default-features = false, features = ["full"]}
 log = "0.4.29"
 log4rs = "1.4.0"
+core_affinity = "0.8.3"
