@@ -136,19 +136,44 @@ impl eframe::App for FxViewerApp {
                         market_data.liquidity_providers[3].name.clone(),
                         fourth_plotpoints,
                     );
+                    // if only four liquidity providers, plot all four lines
+                    if market_data.liquidity_providers.len() == 4 {
+                        egui::CentralPanel::default().show(ctx, |ui| {
+                            Plot::new("my_plot")
+                                .x_axis_label("Time(secs)")
+                                .y_axis_label("EUR/USD Price")
+                                .legend(Legend::default().title("EUR/USD\nLiquidity Providers"))
+                                .show(ui, |plot_ui| {
+                                    plot_ui.line(first_line);
+                                    plot_ui.line(second_line);
+                                    plot_ui.line(third_line);
+                                    plot_ui.line(fourth_line);
+                                });
+                        });
+                    } else {
+                        // plot fifth liquidity provider buy points too
+                        let fifth_plotpoints =
+                            PlotPoints::from(market_data.liquidity_providers[4].buy_points.clone());
+                        let fifth_line = Line::new(
+                            market_data.liquidity_providers[4].name.clone(),
+                            fifth_plotpoints,
+                        );
 
-                    egui::CentralPanel::default().show(ctx, |ui| {
-                        Plot::new("my_plot")
-                            .x_axis_label("Time(secs)")
-                            .y_axis_label("EUR/USD Price")
-                            .legend(Legend::default().title("EUR/USD\nLiquidity Providers"))
-                            .show(ui, |plot_ui| {
-                                plot_ui.line(first_line);
-                                plot_ui.line(second_line);
-                                plot_ui.line(third_line);
-                                plot_ui.line(fourth_line);
-                            });
-                    });
+                        // plot all five liquidity providers
+                        egui::CentralPanel::default().show(ctx, |ui| {
+                            Plot::new("my_plot")
+                                .x_axis_label("Time(secs)")
+                                .y_axis_label("EUR/USD Price")
+                                .legend(Legend::default().title("EUR/USD\nLiquidity Providers"))
+                                .show(ui, |plot_ui| {
+                                    plot_ui.line(first_line);
+                                    plot_ui.line(second_line);
+                                    plot_ui.line(third_line);
+                                    plot_ui.line(fourth_line);
+                                    plot_ui.line(fifth_line);
+                                });
+                        });
+                    }
                 }
             }
         }
