@@ -12,8 +12,10 @@ use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Default)]
 pub struct MarketData {
-    pub buy_points: Vec<[f64; 2]>,
-    pub zero_time_ref: u64,
+    pub citi_buy_points: Vec<[f64; 2]>,
+    pub citi_zero_time_ref: u64,
+    pub barx_buy_points: Vec<[f64; 2]>,
+    pub barx_zero_time_ref: u64,
 }
 
 impl MarketData {
@@ -23,8 +25,10 @@ impl MarketData {
     }
     pub fn new() -> Self {
         Self {
-            buy_points: Vec::new(),
-            zero_time_ref: 0,
+            citi_buy_points: Vec::new(),
+            citi_zero_time_ref: 0,
+            barx_buy_points: Vec::new(),
+            barx_zero_time_ref: 0,
         }
     }
 }
@@ -151,17 +155,43 @@ fn extract_market_data(market_data: &mut MarketData, payload: &str) -> Result<()
     let timestamp: u64 = market_data_params.next().unwrap_or("").trim().parse()?;
 
     // let's just plot one_mill_buy_price for CITI for now
+    println!("extract_market_data received payload: {}", payload);
+    println!("liquidity_provider: {}", liquidity_provider);
     if liquidity_provider.trim() == "CITI" {
+        println!("CITI loop: liquidity_provider: {}", liquidity_provider);
         // set first timestamp as zero time reference
-        if market_data.buy_points.len() == 0 {
-            market_data.zero_time_ref = timestamp;
-            market_data.buy_points.push([0.0, one_mill_buy_price]);
+        if market_data.citi_buy_points.len() == 0 {
+            market_data.citi_zero_time_ref = timestamp;
+            market_data.citi_buy_points.push([0.0, one_mill_buy_price]);
+
+            // println!("liquidity_provider: {}", liquidity_provider);
+            // println!("time delta: {}", timestamp - market_data.citi_zero_time_ref);
+            let adjusted_timestamp = (timestamp - market_data.citi_zero_time_ref) / 1000000000; // convert to seconds for egui plot x axis
+            market_data
+                .citi_buy_points
+                .push([adjusted_timestamp as f64, one_mill_buy_price]);
         } else {
             // println!("liquidity_provider: {}", liquidity_provider);
-            // println!("time delta: {}", timestamp - market_data.zero_time_ref);
-            let adjusted_timestamp = (timestamp - market_data.zero_time_ref) / 1000000000; // convert to seconds for egui plot x axis
+            // println!("time delta: {}", timestamp - market_data.citi_zero_time_ref);
+            let adjusted_timestamp = (timestamp - market_data.citi_zero_time_ref) / 1000000000; // convert to seconds for egui plot x axis
             market_data
-                .buy_points
+                .citi_buy_points
+                .push([adjusted_timestamp as f64, one_mill_buy_price]);
+        }
+    }
+    if liquidity_provider.trim() == "BARX" {
+        println!("BARX loop: liquidity_provider: {}", liquidity_provider);
+        // let's just plot one_mill_buy_price for BARX for now
+        // set first timestamp as zero time reference
+        if market_data.barx_buy_points.len() == 0 {
+            market_data.barx_zero_time_ref = timestamp;
+            market_data.barx_buy_points.push([0.0, one_mill_buy_price]);
+        } else {
+            // println!("liquidity_provider: {}", liquidity_provider);
+            // println!("time delta: {}", timestamp - market_data.citi_zero_time_ref);
+            let adjusted_timestamp = (timestamp - market_data.barx_zero_time_ref) / 1000000000; // convert to seconds for egui plot x axis
+            market_data
+                .barx_buy_points
                 .push([adjusted_timestamp as f64, one_mill_buy_price]);
         }
     }

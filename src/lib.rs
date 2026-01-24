@@ -2,7 +2,7 @@ mod consumer;
 
 use eframe::egui;
 use egui::Context;
-use egui_plot::{Line, Plot, PlotPoints};
+use egui_plot::{Legend, Line, Plot, PlotPoints};
 use log::error;
 use std::process::exit;
 use std::sync::{Arc, Mutex, mpsc};
@@ -60,14 +60,29 @@ impl eframe::App for FxViewerApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let market_data = self.market_data_mutex.lock().unwrap(); // panic if can't get lock
         //println!("FXviewer market data: {:?}", *market_data);
-        println!("latest buy points: {:?}", market_data.buy_points.last());
+        println!(
+            "latest CITI buy points: {:?}",
+            market_data.citi_buy_points.last()
+        );
+        println!(
+            "latest BARX buy points: {:?}",
+            market_data.barx_buy_points.last()
+        );
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            let buy_plotpoints = PlotPoints::from(market_data.buy_points.clone());
-            let line = Line::new("CITI 1M Buy Price", buy_plotpoints);
+            let buy_plotpoints = PlotPoints::from(market_data.citi_buy_points.clone());
+            let citi_line = Line::new("CITI 1M Buy Price", buy_plotpoints);
+            let barx_plotpoints = PlotPoints::from(market_data.barx_buy_points.clone());
+            let barx_line = Line::new("BARX 1M Buy Price", barx_plotpoints);
             Plot::new("my_plot")
+                .x_axis_label("Time(secs)")
+                .y_axis_label("EUR/USD Price")
+                .legend(Legend::default().title("EUR/USD 1M Prices"))
                 //  .view_aspect(2.0)
-                .show(ui, |plot_ui| plot_ui.line(line));
+                .show(ui, |plot_ui| {
+                    plot_ui.line(citi_line);
+                    plot_ui.line(barx_line);
+                });
         });
     }
 }
