@@ -59,30 +59,50 @@ pub fn run_async_fx_data(rec_ctx: Context, market_data_mutex: Arc<Mutex<consumer
 impl eframe::App for FxViewerApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let market_data = self.market_data_mutex.lock().unwrap(); // panic if can't get lock
-        //println!("FXviewer market data: {:?}", *market_data);
-        println!(
-            "latest CITI buy points: {:?}",
-            market_data.citi_buy_points.last()
-        );
-        println!(
-            "latest BARX buy points: {:?}",
-            market_data.barx_buy_points.last()
+
+        // if no market data yet, skip plotting
+        if market_data.liquidity_providers.len() == 0 {
+            //   println!("Waiting for market data...");
+            return;
+        }
+
+        // plot liquidity provider buy points
+        let first_plotpoints =
+            PlotPoints::from(market_data.liquidity_providers[0].buy_points.clone());
+        let first_line = Line::new(
+            market_data.liquidity_providers[0].name.clone(),
+            first_plotpoints,
         );
 
-        egui::CentralPanel::default().show(ctx, |ui| {
-            let buy_plotpoints = PlotPoints::from(market_data.citi_buy_points.clone());
-            let citi_line = Line::new("CITI 1M Buy Price", buy_plotpoints);
-            let barx_plotpoints = PlotPoints::from(market_data.barx_buy_points.clone());
-            let barx_line = Line::new("BARX 1M Buy Price", barx_plotpoints);
-            Plot::new("my_plot")
-                .x_axis_label("Time(secs)")
-                .y_axis_label("EUR/USD Price")
-                .legend(Legend::default().title("EUR/USD 1M Prices"))
-                //  .view_aspect(2.0)
-                .show(ui, |plot_ui| {
-                    plot_ui.line(citi_line);
-                    plot_ui.line(barx_line);
-                });
-        });
+        // if only one liquidity provider, plot single line
+        if market_data.liquidity_providers.len() == 1 {
+            egui::CentralPanel::default().show(ctx, |ui| {
+                Plot::new("my_plot")
+                    .x_axis_label("Time(secs)")
+                    .y_axis_label("EUR/USD Price")
+                    .legend(Legend::default().title("EUR/USD"))
+                    .show(ui, |plot_ui| {
+                        plot_ui.line(first_line);
+                    });
+            });
+        } else {
+            // plot second liquidity provider buy points too
+            let second_plotpoints =
+                PlotPoints::from(market_data.liquidity_providers[1].buy_points.clone());
+            let second_line = Line::new(
+                market_data.liquidity_providers[1].name.clone(),
+                second_plotpoints,
+            );
+            egui::CentralPanel::default().show(ctx, |ui| {
+                Plot::new("my_plot")
+                    .x_axis_label("Time(secs)")
+                    .y_axis_label("EUR/USD Price")
+                    .legend(Legend::default().title("EUR/USD\nLiquidity Providers"))
+                    .show(ui, |plot_ui| {
+                        plot_ui.line(first_line);
+                        plot_ui.line(second_line);
+                    });
+            });
+        }
     }
 }

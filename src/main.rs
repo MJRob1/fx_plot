@@ -9,7 +9,9 @@ fn main() {
     }
 
     let win_option = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_maximized(true),
+        viewport: egui::ViewportBuilder::default()
+            .with_inner_size([1024.0, 768.0])
+            .with_min_inner_size([300.0, 220.0]),
         ..Default::default()
     };
     if let Err(e) = eframe::run_native(
