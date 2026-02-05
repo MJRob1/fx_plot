@@ -15,7 +15,7 @@ fn main() {
         ..Default::default()
     };
     if let Err(e) = eframe::run_native(
-        "Plot demo",
+        "FX Plot of Liquidity Providers",
         win_option,
         Box::new(|cc| Ok(Box::new(fx_plot::FxViewerApp::init(cc)))),
     ) {
