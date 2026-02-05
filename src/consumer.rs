@@ -1,3 +1,5 @@
+use chrono::Utc;
+use chrono::prelude::DateTime;
 use egui::Context;
 use log::{error, info};
 use rdkafka::consumer::{CommitMode, Consumer, StreamConsumer};
@@ -9,6 +11,7 @@ use std::io;
 use std::num::ParseFloatError;
 use std::num::ParseIntError;
 use std::sync::{Arc, Mutex};
+use std::time::{Duration, UNIX_EPOCH};
 
 #[derive(Debug, Default)]
 pub struct MarketData {
@@ -32,6 +35,8 @@ pub struct LpBuyPoints {
     pub name: String,
     pub buy_points: Vec<[f64; 2]>,
     pub zero_time_ref: u64,
+    pub global_start_hour: f64,
+    pub global_start_minute: f64,
 }
 
 #[derive(Debug)]
@@ -166,6 +171,8 @@ fn extract_market_data(market_data: &mut MarketData, payload: &str) -> Result<()
             name: liquidity_provider.to_string(),
             buy_points: Vec::new(),
             zero_time_ref: 0,
+            global_start_hour: 0.0,
+            global_start_minute: 0.0,
         };
         market_data.liquidity_providers.push(new_lp);
     }
@@ -180,6 +187,26 @@ fn extract_market_data(market_data: &mut MarketData, payload: &str) -> Result<()
         if lp.buy_points.len() == 0 {
             lp.zero_time_ref = timestamp;
             lp.buy_points.push([0.0, one_mill_buy_price]);
+            let d = UNIX_EPOCH + Duration::from_nanos(timestamp);
+            let datetime = DateTime::<Utc>::from(d);
+            let hour: f64 = match datetime.format("%H").to_string().parse::<f64>() {
+                Ok(x) => x,
+                Err(error) => {
+                    println!("Error converting number: {}", error);
+                    println!("Setting num to default: 0");
+                    0.0
+                }
+            };
+            let minutes: f64 = match datetime.format("%M").to_string().parse::<f64>() {
+                Ok(x) => x,
+                Err(error) => {
+                    println!("Error converting number: {}", error);
+                    println!("Setting num to default: 0");
+                    0.0
+                }
+            };
+            lp.global_start_hour = hour;
+            lp.global_start_minute = minutes;
         } else {
             let adjusted_timestamp = (timestamp - lp.zero_time_ref) / 1000000000; // convert to seconds for egui plot x axis
             lp.buy_points

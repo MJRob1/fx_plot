@@ -2,8 +2,9 @@ mod consumer;
 
 use eframe::egui;
 use egui::Context;
-use egui_plot::{Legend, Line, Plot, PlotPoints};
+use egui_plot::{AxisHints, GridMark, Legend, Line, Plot, PlotPoints};
 use log::error;
+use std::ops::RangeInclusive;
 use std::process::exit;
 use std::sync::{Arc, Mutex, mpsc};
 use std::thread;
@@ -76,16 +77,72 @@ impl eframe::App for FxViewerApp {
             lines.push(line);
         }
 
+        let time_formatter = |mark: GridMark, _range: &RangeInclusive<f64>| {
+            let seconds = mark.value;
+            let start_minute = market_data.liquidity_providers[0].global_start_minute as f64;
+            let start_hour = market_data.liquidity_providers[0].global_start_hour as f64;
+            get_time_axis_string(seconds, start_hour, start_minute)
+        };
+
+        let x_axes = vec![
+            AxisHints::new_x()
+                .label("Time of Day (hrs:mins to nearest minute)")
+                .formatter(time_formatter),
+            AxisHints::new_x().label("Time (seconds since start)"),
+        ];
+
         egui::CentralPanel::default().show(ctx, |ui| {
             Plot::new("fx_plot")
-                .x_axis_label("Time(secs)")
-                .y_axis_label("EUR/USD Price")
+                .custom_x_axes(x_axes)
+                .y_axis_label("EUR/USD 1M Buy Price")
                 .legend(Legend::default().title("EUR/USD\nLiquidity Providers"))
+                //  .time_formatter(time_formatter)
                 .show(ui, |plot_ui| {
                     for line in lines.into_iter() {
                         plot_ui.line(line);
                     }
                 });
         });
+    }
+}
+
+fn get_time_axis_string(seconds: f64, start_hour: f64, start_minute: f64) -> String {
+    const SECONDS_PER_MINUTE: f64 = 60.0;
+    const MINUTES_PER_HOUR: f64 = 60.0;
+    const SECONDS_PER_HOUR: f64 = SECONDS_PER_MINUTE * MINUTES_PER_HOUR;
+
+    let minutes_part = seconds as u32 / 60;
+
+    if seconds >= SECONDS_PER_HOUR {
+        // more than an hour
+        let remaining_minutes = minutes_part % 60;
+
+        if remaining_minutes + start_minute as u32 >= 60 {
+            // if adding the remaining minutes exceeds 60, increment hour
+            let adjusted_hour = (start_hour + (minutes_part / 60) as f64 + 1.0) % 24.0;
+            let adjusted_minute = (start_minute + (minutes_part % 60) as f64) - 60.0;
+            format!("{:02}:{:02}", adjusted_hour as u32, adjusted_minute as u32)
+        } else {
+            // no hour increment needed
+            let adjusted_hour = (start_hour + (minutes_part / 60) as f64) % 24.0;
+            let adjusted_minute = start_minute + (minutes_part % 60) as f64;
+            format!("{:02}:{:02}", adjusted_hour as u32, adjusted_minute as u32)
+        }
+    } else if seconds >= SECONDS_PER_MINUTE {
+        // more than a minute
+        if minutes_part + start_minute as u32 >= 60 {
+            // if adding the minutes exceeds 60, increment hour
+            let adjusted_hour = (start_hour + 1.0) % 24.0;
+            let adjusted_minute = (start_minute + minutes_part as f64) - 60.0;
+            format!("{:02}:{:02}", adjusted_hour as u32, adjusted_minute as u32)
+        } else {
+            // no hour increment needed
+            let adjusted_hour = start_hour;
+            let adjusted_minute = start_minute + minutes_part as f64;
+            format!("{:02}:{:02}", adjusted_hour as u32, adjusted_minute as u32)
+        }
+    } else {
+        // less than a minute
+        String::new()
     }
 }
